@@ -62,7 +62,7 @@ def nlars(X, X_ty, num_feat, max_neighbors):
         lam[0, 0] = C[0]
 
     k = 0
-    while sum(c[A]) / len(A) >= 1e-9 and len(A) < num_feat + 1:
+    while len(A) < num_feat + 1:
         s = np.ones((len(A), 1), dtype=np.float32)
 
         try:
