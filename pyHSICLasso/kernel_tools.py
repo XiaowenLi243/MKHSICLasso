@@ -45,3 +45,15 @@ def kernel_gaussian(X_in_1, X_in_2, sigma):
         np.tile(X_in_12, (n_2, 1)).transpose() - 2 * np.dot(X_in_1.T, X_in_2)
     K = np.exp(-dist_2 / (2 * np.power(sigma, 2)))
     return K
+
+
+### linear kernel
+def kernel_linear(X_in_1,X_in_2):
+    K = X_in_1.T.dot(X_in_2)
+    return K
+
+### poly 2 kernel  
+def kernel_polynomial(X_in_1,X_in_2,degree):
+    #Define the Kernel Function
+    K = X_in_1.T.dot(X_in_2)**degree
+    return K
