@@ -18,14 +18,12 @@ def nlars(X, X_ty, num_feat, max_neighbors):
     """
     We used the a Python implementation of the Nonnegative LARS solver
     written in MATLAB at http://orbit.dtu.dk/files/5618980/imm5523.zip
-
     Solves the problem argmin_beta 1/2||y-X*beta||_2^2  s.t. beta>=0.
     The problem is solved using a modification of the Least Angle Regression
     and Selection algorithm.
     As such the entire regularization path for the LASSO problem
     min 1/2||y-X*beta||_2^2 + lambda|beta|_1  s.t. beta>=0
     for all values of lambda is given in path.
-
     Input:
         X            matrix of size D x D
         X_ty         vector of size D x 1
@@ -41,10 +39,11 @@ def nlars(X, X_ty, num_feat, max_neighbors):
     n, d = X.shape
 
     A = []
+    A_all = [] # A_all to record A in each path
     A_neighbors = []
     A_neighbors_score = []
     beta = np.zeros((d, 1), dtype=np.float32)
-    path = lil_matrix((d, 4 * d))
+    path_all = lil_matrix((d, 4 * d))
     lam = np.zeros((1, 4 * d))
 
     I = list(range(d))
@@ -62,6 +61,7 @@ def nlars(X, X_ty, num_feat, max_neighbors):
         lam[0, 0] = C[0]
 
     k = 0
+    #while sum(c[A]) / len(A) >= 1e-15 and len(A) < num_feat + 1:
     while len(A) < num_feat + 1:
         s = np.ones((len(A), 1), dtype=np.float32)
 
@@ -100,7 +100,7 @@ def nlars(X, X_ty, num_feat, max_neighbors):
         C = max(c[I])
 
         k += 1
-        path[:, k] = beta
+        path_all[:, k] = beta
 
         if len(C) == 0:
             lam[k] = 0
@@ -109,6 +109,7 @@ def nlars(X, X_ty, num_feat, max_neighbors):
         if lasso_cond == 0:
             A.append(I[j])
             I.remove(I[j])
+        A_all.append(A[:])
 
     # We run numfeat + 1 iteration to update beta and path information
     # Then, we return only numfeat features
@@ -133,7 +134,7 @@ def nlars(X, X_ty, num_feat, max_neighbors):
         A_neighbors.append(sort_index[0:num_neighbors])
         A_neighbors_score.append(tmp[sort_index[0:num_neighbors]])
 
-    path_final = path[:, 0:(k + 1)].toarray()
+    path_final = path_all[:, 0:(k + 1)].toarray()
     lam_final = lam[0:(k + 1)]
 
-    return path_final, beta, A_sorted, lam_final, A_neighbors, A_neighbors_score
+    return A_all, path_final, beta, A_sorted, lam_final, A_neighbors, A_neighbors_score
