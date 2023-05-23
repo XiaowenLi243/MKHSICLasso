@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # coding: utf-8
 
 from __future__ import (absolute_import, division, print_function,
@@ -17,7 +16,7 @@ from six import string_types
 from .hsic_lasso import hsic_lasso, compute_kernel
 from .input_data import input_csv_file, input_matlab_file, input_tsv_file
 from .nlars import nlars
-from .plot_figure import plot_dendrogram, plot_heatmap, plot_path
+from .plot_figure import plot_dendrogram, plot_path
 
 standard_library.install_aliases()
 
@@ -29,6 +28,7 @@ class MKHSICLasso(object):
         self.Y_in = None
         self.X = None
         self.Xty = None
+        self.A_all = None
         self.path = None
         self.beta = None
         self.A = None
@@ -51,7 +51,7 @@ class MKHSICLasso(object):
         elif isinstance(args[0], np.ndarray):
             if 'featname' in _3to2kwargs:
                 featname = _3to2kwargs['featname']; del _3to2kwargs['featname']
-            else: featname = ['%d' % x for x in range(1, args[0].shape[1] + 1)]
+            else: featname = ['%d' % x for x in range(1, args[0].shape[1]*3 + 1)]
 
             if len(args) == 2:
                 self._input_data_ndarray(args[0], args[1], featname)
@@ -95,7 +95,6 @@ class MKHSICLasso(object):
         self.max_neighbors = max_neighbors
         n = self.X_in.shape[1]
         B = B if B else n
-        x_kernel = "Delta" if discrete_x else "Gaussian"
         numblocks = n / B
         discarded = n % B
 
@@ -110,11 +109,9 @@ of blocks {} will be approximated to {}.".format(B, n, numblocks, int(numblocks)
         # Number of permutations of the block HSIC
         M = 1 + bool(numblocks - 1) * (M - 1)
         print('M set to {}.'.format(M))
-        print('Using {} kernel for the features, {} kernel for the outcomes{}.'.format(
-            x_kernel, y_kernel, ' and Gaussian kernel for the covariates' if covars.size else ''))
+        print('{} kernel for the outcomes{}.'.format(y_kernel, ' and Gaussian kernel for the covariates' if covars.size else ''))
 
-        X,Xty,Ky = hsic_lasso(self.X_in, self.Y_in, y_kernel, x_kernel,
-                              n_jobs=n_jobs, discarded=discarded, B=B, M=M)
+        X,Xty,Ky = hsic_lasso(self.X_in, self.Y_in, y_kernel, n_jobs=n_jobs, discarded=discarded, B=B, M=M)
 
         # np.concatenate(self.X, axis = 0) * np.sqrt(1/(numblocks * M))
         self.X = X * np.sqrt(1 / (numblocks * M))
@@ -137,9 +134,7 @@ of blocks {} will be approximated to {}.".format(B, n, numblocks, int(numblocks)
             #print(betas)
             self.Xty = self.Xty - betas*np.dot(self.X.transpose(),Kc)
 
-        self.path, self.beta, self.A, self.lam, self.A_neighbors, \
-            self.A_neighbors_score = nlars(
-                self.X, self.Xty, num_feat, self.max_neighbors)
+        self.A_all, self.path, self.beta, self.A, self.lam, self.A_neighbors, self.A_neighbors_score = nlars(self.X, self.Xty, num_feat, self.max_neighbors)
 
         return True
 
@@ -169,7 +164,7 @@ of blocks {} will be approximated to {}.".format(B, n, numblocks, int(numblocks)
     def dump(self):
         maxval = self.beta[self.A[0]][0]
         results = []
-        results.append(" HSICLasso : Result ")
+        results.append(" MKHSICLasso : Result ")
         results.append("| Order | Feature      | Score | Top-{} Related Feature (Relatedness Score)".format(min(5, len(self.beta) - 1)))
         for i in range(len(self.A)):
             ofs = "| {:<5} | {:<12} | {:.3f} |".format(i + 1, self.featname[self.A[i]], self.beta[self.A[i]][0] / maxval)
@@ -187,14 +182,14 @@ of blocks {} will be approximated to {}.".format(B, n, numblocks, int(numblocks)
         # for i in range(len(self.A)):
         #    print(self.path[self.A[i], 1:])
         # return True
-
-    def plot_heatmap(self, filepath = 'heatmap.png'):
-        if self.linkage_dist is None or self.hclust_featname is None or self.hclust_featnameindex is None:
-            raise UnboundLocalError("Input your data")
-        plot_heatmap(self.X_in[self.hclust_featnameindex, :],
-                     self.linkage_dist, self.hclust_featname,
-                     filepath)
-        return True
+    #
+    #def plot_heatmap(self, filepath = 'heatmap.png'):
+    #    if self.linkage_dist is None or self.hclust_featname is None or self.hclust_featnameindex is None:
+    #        raise UnboundLocalError("Input your data")
+    #    plot_heatmap(self.X_in[self.hclust_featnameindex, :],
+    #                 self.linkage_dist, self.hclust_featname,
+    #                 filepath)
+     #   return True
 
     def plot_dendrogram(self, filepath = 'dendrogram.png'):
         if self.linkage_dist is None or self.hclust_featname is None:
@@ -323,7 +318,14 @@ of blocks {} will be approximated to {}.".format(B, n, numblocks, int(numblocks)
             fout.write(sstr)
 
         fout.close()
+        
+    def save_param_path(self, filename='param_path.npy'):
+        # Convert the list to a NumPy array
+        my_array = np.array(self.A_all, dtype=object)
 
+        # Save the array to an npy file
+        np.save(filename, my_array)
+    
     # ========================================
 
     def _check_args(self, args):
@@ -409,3 +411,4 @@ of blocks {} will be approximated to {}.".format(B, n, numblocks, int(numblocks)
         perm = np.random.permutation(n)
         self.X_in = self.X_in[:, perm]
         self.Y_in = self.Y_in[:, perm]
+
