@@ -11,11 +11,11 @@ from future import standard_library
 import numpy as np
 from joblib import Parallel, delayed
 
-from .kernel_tools import kernel_delta_norm, kernel_gaussian
+from .kernel_tools import kernel_delta_norm, kernel_gaussian,kernel_linear,kernel_polynomial
 
 standard_library.install_aliases()
 
-def hsic_lasso(X, Y, y_kernel, x_kernel='Gaussian', n_jobs=-1, discarded=0, B=0, M=1):
+def hsic_lasso(X, Y, y_kernel, n_jobs=-1, discarded=0, B=0, M=1):
     """
     Input:
         X      input_data
@@ -34,8 +34,12 @@ def hsic_lasso(X, Y, y_kernel, x_kernel='Gaussian', n_jobs=-1, discarded=0, B=0,
     L = np.reshape(L,(n * B * M,1))
 
     # Preparing design matrix for HSIC Lars
-    result = Parallel(n_jobs=n_jobs)([delayed(parallel_compute_kernel)(
-        np.reshape(X[k,:],(1,n)), x_kernel, k, B, M, n, discarded) for k in range(d)])
+    result1 = Parallel(n_jobs=n_jobs)([delayed(parallel_compute_kernel)(
+        np.reshape(X[k,:],(1,n)), 'Gaussian', k, B, M, n, discarded) for k in range(d)])
+    result2 = Parallel(n_jobs=n_jobs)([delayed(parallel_compute_kernel)(
+        np.reshape(X[k,:],(1,n)), 'Poly_2', k, B, M, n, discarded) for k in range(d)])
+    result3 = Parallel(n_jobs=n_jobs)([delayed(parallel_compute_kernel)(
+        np.reshape(X[k,:],(1,n)), 'Linear', k, B, M, n, discarded) for k in range(d)])
 
     # non-parallel version for debugging purposes
     # result = []
@@ -43,14 +47,21 @@ def hsic_lasso(X, Y, y_kernel, x_kernel='Gaussian', n_jobs=-1, discarded=0, B=0,
     #     X = parallel_compute_kernel(X[k, :], x_kernel, k, B, M, n, discarded)
     #     result.append(X)
 
-    result = dict(result)
+    result1 = dict(result1)
+    result2 = dict(result2)
+    result3 = dict(result3)
 
-    K = np.array([result[k] for k in range(d)]).T
+     # combine column matrices horizontally
+    K1 = np.array([result1[k] for k in range(d)]).T
+    K2 = np.array([result2[k] for k in range(d)]).T
+    K3 = np.array([result3[k] for k in range(d)]).T
+    
+    K = np.hstack((K1,K2,K3))
     KtL = np.dot(K.T, L)
 
     return K, KtL, L
 
-def compute_kernel(x, kernel, B = 0, M = 1, discarded = 0):
+def compute_kernel(x, kernel, B = 20, M = 3, discarded = 0):
 
     d,n = x.shape
 
@@ -58,7 +69,7 @@ def compute_kernel(x, kernel, B = 0, M = 1, discarded = 0):
     K = np.zeros(n * B * M, dtype=np.float32)
 
     # Normalize data
-    if kernel == "Gaussian":
+    if kernel != 'Delta' :
         x = (x / (x.std() + 10e-20)).astype(np.float32)
 
     st = 0
@@ -72,7 +83,11 @@ def compute_kernel(x, kernel, B = 0, M = 1, discarded = 0):
             j = min(n, i + B)
 
             if kernel == 'Gaussian':
-                k = kernel_gaussian(x[:,index[i:j]], x[:,index[i:j]], np.sqrt(d))
+                k = kernel_gaussian(x[:,index[i:j]], x[:,index[i:j]], np.sqrt(d))   
+            elif kernel == 'Linear':
+                k = kernel_linear(x[:,index[i:j]], x[:,index[i:j]])
+            elif kernel == 'Poly_2':
+                k = kernel_polynomial(x[:,index[i:j]], x[:,index[i:j]], 2)
             elif kernel == 'Delta':
                 k = kernel_delta_norm(x[:,index[i:j]], x[:, index[i:j]])
 
@@ -85,6 +100,7 @@ def compute_kernel(x, kernel, B = 0, M = 1, discarded = 0):
             ed += B ** 2
 
     return K
+
 
 def parallel_compute_kernel(x, kernel, feature_idx, B, M, n, discarded):
 
