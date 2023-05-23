@@ -9,7 +9,7 @@ from builtins import range
 from future import standard_library
 
 import pandas as pd
-import seaborn as sns
+#import seaborn as sns
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.cluster.hierarchy import dendrogram
@@ -23,17 +23,17 @@ microarray_cmap = LinearSegmentedColormap('microarray', {
 standard_library.install_aliases()
 
 
-def plot_heatmap(X, row_linkage, featname, filepath):
-    df = pd.DataFrame(X)
-    df.index = featname
-    cg = sns.clustermap(df, center=0, row_linkage=row_linkage,
-                        method='ward', cmap=microarray_cmap)
-    cg.ax_heatmap.set_xticklabels("")
-    plt.setp(cg.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
-    plt.setp(cg.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
-    plt.title('Heatmap')
-    plt.savefig(filepath)
-    plt.clf()
+#def plot_heatmap(X, row_linkage, featname, filepath):
+ #   df = pd.DataFrame(X)
+  #  df.index = featname
+   # cg = sns.clustermap(df, center=0, row_linkage=row_linkage,
+    #                    method='ward', cmap=microarray_cmap)
+    #cg.ax_heatmap.set_xticklabels("")
+   # plt.setp(cg.ax_heatmap.yaxis.get_majorticklabels(), rotation=0)
+  #  plt.setp(cg.ax_heatmap.xaxis.get_majorticklabels(), rotation=90)
+   # plt.title('Heatmap')
+    #plt.savefig(filepath)
+    #plt.clf()
 
 
 def plot_dendrogram(linkage, featname, filepath):
@@ -53,3 +53,4 @@ def plot_path(path, beta, A, filepath):
     plt.legend()
     plt.savefig(filepath)
     plt.clf()
+
