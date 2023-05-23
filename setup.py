@@ -40,7 +40,7 @@ setup(
     url="http://www.makotoyamada-ml.com/hsiclasso.html",
     description="Supervised, nonlinear feature selection method for high-dimensional datasets.",
     long_description=long_description,
-    download_url="https://github.com/riken-aip/pyHSICLasso",
+    download_url="https://github.com/XiaowenLi243/pyHSICLasso.git",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Science/Research",
