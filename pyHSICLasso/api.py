@@ -22,7 +22,7 @@ from .plot_figure import plot_dendrogram, plot_heatmap, plot_path
 standard_library.install_aliases()
 
 
-class HSICLasso(object):
+class MKHSICLasso(object):
     def __init__(self):
         self.input_file = None
         self.X_in = None
